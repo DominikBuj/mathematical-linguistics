@@ -290,7 +290,8 @@ class Program
         q_19_return19,
         q_19_basic_change4,
         q_20_return20,
-        q_20_basic_change5
+        q_20_basic_change5,
+        q_20_wax
     };
 
     // Tabela przejść automatu, zapisana przy użyciu słownika C#.
