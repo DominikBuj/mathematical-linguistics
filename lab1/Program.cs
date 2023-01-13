@@ -1,4 +1,9 @@
-﻿[Serializable]
+﻿// Autor: Dominik Bujnowicz
+// Zadanie: 1 Automat Deterministyczny
+// Wersja programu: na ocenę bardzo dobrą
+
+// Wyjątek obsługujący niepoprawny (nie znajdujący się w alfabecie DFA) symbol wprowadzony przez użytkownika.
+[Serializable]
 public class InvalidSymbolException : Exception
 {
     public InvalidSymbolException() : base() { }
@@ -6,6 +11,7 @@ public class InvalidSymbolException : Exception
     public InvalidSymbolException(string message, Exception inner) : base(message, inner) { }
 }
 
+// Wyjątek obsługujący nieistniejące przejście w tablicy przejść.
 [Serializable]
 public class UndefinedTransitionException : Exception
 {
@@ -14,6 +20,7 @@ public class UndefinedTransitionException : Exception
     public UndefinedTransitionException(string message, Exception inner) : base(message, inner) { }
 }
 
+// Klasa reprezentująca symbol alfabetu.
 public class Symbol
 {
     public Symbol(string Name, string Content, string Description)
@@ -28,6 +35,7 @@ public class Symbol
     public string Description { get; }
 }
 
+// Klasa reprezentująca stan automatu.
 public class State
 {
     public State(string Name, string Description)
@@ -40,6 +48,7 @@ public class State
     public string Description { get; }
 }
 
+// Klasa reprezentująca automat deterministyczny.
 public class DFA
 {
     public DFA(
@@ -59,14 +68,15 @@ public class DFA
         this.StateHistory.Add(this.CurrentState);
     }
 
-    public List<State> States { get; }
-    public List<Symbol> Alphabet { get; }
-    public State InitialState { get; }
-    public List<State> AcceptingStates { get; }
-    public Dictionary<State, Dictionary<Symbol, State>> TransitionTable { get; }
-    public State CurrentState { get; set; }
-    public List<State> StateHistory { get; set; } = new List<State>();
+    public List<State> States { get; } // Wszystkie możliwe stany
+    public List<Symbol> Alphabet { get; } // Alfabet
+    public State InitialState { get; } // Początkowy stan
+    public List<State> AcceptingStates { get; } // Akceptujące stany
+    public Dictionary<State, Dictionary<Symbol, State>> TransitionTable { get; } // Tablica przejść
+    public State CurrentState { get; set; } // Obecny stan
+    public List<State> StateHistory { get; set; } = new List<State>(); // Historia stanów
 
+    // Metoda pokazująca wszystkie symbole obsługiwane (istniejące w alfabecie) przez automat.
     public void printPossibleSymbols()
     {
         Console.WriteLine("Możliwe symbole (\"symbol\" -> opis symbolu):");
@@ -74,6 +84,7 @@ public class DFA
         Console.WriteLine();
     }
 
+    // Metoda pokazująca stan, w którym znajduje się obecnie automat.
     public void printCurrentState()
     {
         Console.WriteLine($"Aktualny stan: {this.CurrentState.Name}");
@@ -82,6 +93,7 @@ public class DFA
         Console.WriteLine();
     }
 
+    // Metoda pokazująca w kolejności chronologicznej wszystkie stany, w których znajdował się automat.
     public void printStateHistory()
     {
         Console.WriteLine("Historia przejść stanów:");
@@ -91,22 +103,29 @@ public class DFA
         Console.WriteLine();
     }
 
+    // Metoda sprawdzająca czy stan, w którym znajduje się obecnie automat jest stanem akceptującym.
     public bool isCurrentStateAccepting()
     {
         return this.AcceptingStates.Any(acceptingState => acceptingState == this.CurrentState);
     }
 
+    // Funkcja przejścia automatu. Akceptuje wprowadzony przez użytkownika tekst.
     public void transition(string? input)
     {
+        // Na podstawie wprowadzonego tekstu zostaje znaleziony odpowiedni symbol alfabetu.
         Symbol? inputSymbol = this.Alphabet.Find(alphabetSymbol => alphabetSymbol.Content == input);
+        // W przypadku gdy wprowadzony tekst nie odpowiada żadnemu symbolowi, funkcja wyrzuca wyjątek.
         if (inputSymbol == null) throw new InvalidSymbolException($"\"{input}\" nie znajduje się w alfabecie automatu!");
 
+        // Na podstawie obecnego stanu automatu i wprowadzonego symbolu, z tabeli przejść zostaje wyczytany następny stan automatu.
+        // W przypadku gdy z tabeli przejść nie uda się wyczytać następnego stanu, funkcja wyrzuca wyjątek.
         if (this.TransitionTable.TryGetValue(this.CurrentState, out Dictionary<Symbol, State>? stateTransitions))
         {
             if (stateTransitions == null) throw new InvalidSymbolException($"Przejścia dla stanu {this.CurrentState.Name} nie są zdefiniowane!");
             if (stateTransitions.TryGetValue(inputSymbol, out State? nextState))
             {
                 if (nextState == null) throw new InvalidSymbolException($"Przejście ze stanu {this.CurrentState.Name} i symbolu {inputSymbol.Name} nie jest zdefiniowane!");
+                // Automat zmienia obecny stan na stan wyczytany z tabeli przejść i dodaje go do historii stanów automatu.
                 this.CurrentState = nextState;
                 this.StateHistory.Add(this.CurrentState);
             }
@@ -116,13 +135,7 @@ public class DFA
 
 class Program
 {
-    static readonly Symbol s_1 = new Symbol("s_1", "1", "Moneta 1zł");
-    static readonly Symbol s_2 = new Symbol("s_2", "2", "Moneta 2zł");
-    static readonly Symbol s_5 = new Symbol("s_5", "5", "Moneta 5zł");
-    static readonly Symbol s_return = new Symbol("s_return", "zwrot", "Zwrot zapłaconej kwoty");
-    static readonly Symbol s_basic = new Symbol("s_basic", "podstawowe", "Mycie podstawowe");
-    static readonly Symbol s_wax = new Symbol("s_wax", "woskowanie", "Mycie z woskowaniem");
-
+    // Możliwe stany automatu.
     static readonly State q_0 = new State("q_0", "Suma wrzuconych monet 0zł");
     static readonly State q_1 = new State("q_1", "Suma wrzuconych monet 1zł");
     static readonly State q_1_return1 = new State("q_1_return1", "Suma wrzuconych monet 1zł\nZwróć 1zł");
@@ -177,6 +190,7 @@ class Program
     static readonly State q_24_return4 = new State("q_24_return4", "Suma wrzuconych monet 24zł\nZwróc 4zł");
     static readonly State q_25_return5 = new State("q_25_return5", "Suma wrzuconych monet 25zł\nZwróc 5zł");
 
+    // Lista możliwych stanów automatu.
     static readonly List<State> states = new List<State>
     {
         q_0,
@@ -234,10 +248,21 @@ class Program
         q_25_return5
     };
 
+    // Symbole należące do alfabetu automatu.
+    static readonly Symbol s_1 = new Symbol("s_1", "1", "Moneta 1zł");
+    static readonly Symbol s_2 = new Symbol("s_2", "2", "Moneta 2zł");
+    static readonly Symbol s_5 = new Symbol("s_5", "5", "Moneta 5zł");
+    static readonly Symbol s_return = new Symbol("s_return", "zwrot", "Zwrot zapłaconej kwoty");
+    static readonly Symbol s_basic = new Symbol("s_basic", "podstawowe", "Mycie podstawowe");
+    static readonly Symbol s_wax = new Symbol("s_wax", "woskowanie", "Mycie z woskowaniem");
+
+    // Alfabet automatu.
     static readonly List<Symbol> alphabet = new List<Symbol> { s_1, s_2, s_5, s_return, s_basic, s_wax };
 
+    // Początkowy stan automatu.
     static readonly State initialState = q_0;
 
+    // Stany akceptujące automatu.
     static readonly List<State> acceptingStates = new List<State>
     {
         q_1_return1,
@@ -265,14 +290,12 @@ class Program
         q_19_return19,
         q_19_basic_change4,
         q_20_return20,
-        q_20_basic_change5,
-        q_21_return1,
-        q_22_return2,
-        q_23_return3,
-        q_24_return4,
-        q_25_return5
+        q_20_basic_change5
     };
 
+    // Tabela przejść automatu, zapisana przy użyciu słownika C#.
+    // Każdy stan ma przypisany do siebie kolejny słownik,
+    // w którym dla każdego symbolu jest przypisany odpowiedni następny stan automatu.    
     static readonly Dictionary<State, Dictionary<Symbol, State>> transitionTable = new Dictionary<State, Dictionary<Symbol, State>>
     {
         {
@@ -915,25 +938,31 @@ class Program
 
     static void Main()
     {
+        // Inicjalizacja obiektu reprezentującego automat DFA.
         DFA dfa = new DFA(states, alphabet, initialState, acceptingStates, transitionTable);
 
+        // Pokazanie obsługiwanych symboli i stanu początkowego.
         Console.WriteLine("Automat pobierający opłaty w myjni samochodowej");
         Console.WriteLine();
         dfa.printPossibleSymbols();
         dfa.printCurrentState();
 
+        // Główna pętla programu obsługująca input użytkownika.
         while (true)
         {
+            // Wczytanie inputu użytkownika.
             Console.WriteLine("----------------------------------------");
             string? input = Console.ReadLine();
             Console.WriteLine();
 
             try
             {
+                // Uruchomienie funkcji przejścia automatu.
                 dfa.transition(input);
             }
             catch (InvalidSymbolException e)
             {
+                // Użytkownik wprowadził niepoprawny symbol.
                 Console.WriteLine(e.Message);
                 Console.WriteLine();
                 dfa.printPossibleSymbols();
@@ -942,15 +971,19 @@ class Program
             }
             catch (UndefinedTransitionException e)
             {
+                // Nie znaleziono przejścia.
                 Console.WriteLine(e.Message);
                 return;
             }
 
+            // Pokazanie obencego stanu automatu.
             dfa.printCurrentState();
 
+            // Wyjście z pętli w przypadku stanu akceptującego.
             if (dfa.isCurrentStateAccepting()) break;
         }
 
+        // Pokazanie historii stanów automatu.
         Console.WriteLine("Automat zakończył działanie!");
         Console.WriteLine();
         dfa.printStateHistory();
