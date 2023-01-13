@@ -1,22 +1,42 @@
-﻿public class Symbol
+﻿[Serializable]
+public class InvalidSymbolException : Exception
 {
-    public Symbol(string Content, string Description)
+    public InvalidSymbolException() : base() { }
+    public InvalidSymbolException(string message) : base(message) { }
+    public InvalidSymbolException(string message, Exception inner) : base(message, inner) { }
+}
+
+[Serializable]
+public class UndefinedTransitionException : Exception
+{
+    public UndefinedTransitionException() : base() { }
+    public UndefinedTransitionException(string message) : base(message) { }
+    public UndefinedTransitionException(string message, Exception inner) : base(message, inner) { }
+}
+
+public class Symbol
+{
+    public Symbol(string Name, string Content, string Description)
     {
+        this.Name = Name;
         this.Content = Content;
         this.Description = Description;
     }
 
+    public string Name { get; }
     public string Content { get; }
     public string Description { get; }
 }
 
 public class State
 {
-    public State(string Description)
+    public State(string Name, string Description)
     {
+        this.Name = Name;
         this.Description = Description;
     }
 
+    public string Name { get; }
     public string Description { get; }
 }
 
@@ -34,6 +54,9 @@ public class DFA
         this.InitialState = InitialState;
         this.AcceptingStates = AcceptingStates;
         this.TransitionTable = TransitionTable;
+
+        this.CurrentState = this.InitialState;
+        this.StateHistory.Add(this.CurrentState);
     }
 
     public List<State> States { get; }
@@ -41,82 +64,118 @@ public class DFA
     public State InitialState { get; }
     public List<State> AcceptingStates { get; }
     public Dictionary<State, Dictionary<Symbol, State>> TransitionTable { get; }
+    public State CurrentState { get; set; }
+    public List<State> StateHistory { get; set; } = new List<State>();
 
     public void printPossibleSymbols()
     {
-        Console.WriteLine("Możliwe symbole: (\"symbol\" -> opis symbolu)");
+        Console.WriteLine("Możliwe symbole (\"symbol\" -> opis symbolu):");
         foreach (Symbol symbol in this.Alphabet) Console.WriteLine($"\"{symbol.Content}\" -> {symbol.Description}");
         Console.WriteLine();
     }
 
-    public bool isSymbolInAlphabet(string? symbol)
+    public void printCurrentState()
     {
-        return this.Alphabet.Any(alphabetSymbol => alphabetSymbol.Content == symbol);
+        Console.WriteLine($"Aktualny stan: {this.CurrentState.Name}");
+        Console.WriteLine($"Opis Stanu:");
+        Console.WriteLine(this.CurrentState.Description);
+        Console.WriteLine();
+    }
+
+    public void printStateHistory()
+    {
+        Console.WriteLine("Historia przejść stanów:");
+        if (this.StateHistory.Count > 0) Console.Write(this.StateHistory[0].Name);
+        else Console.WriteLine("Brak stanów!");
+        for (int i = 1; i < this.StateHistory.Count; ++i) Console.Write($" -> {this.StateHistory[i].Name}");
+        Console.WriteLine();
+    }
+
+    public bool isCurrentStateAccepting()
+    {
+        return this.AcceptingStates.Any(acceptingState => acceptingState == this.CurrentState);
+    }
+
+    public void transition(string? input)
+    {
+        Symbol? inputSymbol = this.Alphabet.Find(alphabetSymbol => alphabetSymbol.Content == input);
+        if (inputSymbol == null) throw new InvalidSymbolException($"\"{input}\" nie znajduje się w alfabecie automatu!");
+
+        if (this.TransitionTable.TryGetValue(this.CurrentState, out Dictionary<Symbol, State>? stateTransitions))
+        {
+            if (stateTransitions == null) throw new InvalidSymbolException($"Przejścia dla stanu {this.CurrentState.Name} nie są zdefiniowane!");
+            if (stateTransitions.TryGetValue(inputSymbol, out State? nextState))
+            {
+                if (nextState == null) throw new InvalidSymbolException($"Przejście ze stanu {this.CurrentState.Name} i symbolu {inputSymbol.Name} nie jest zdefiniowane!");
+                this.CurrentState = nextState;
+                this.StateHistory.Add(this.CurrentState);
+            }
+        }
     }
 }
 
 class Program
 {
-    static readonly Symbol s_1 = new Symbol("1", "Moneta 1zł");
-    static readonly Symbol s_2 = new Symbol("2", "Moneta 2zł");
-    static readonly Symbol s_5 = new Symbol("5", "Moneta 5zł");
-    static readonly Symbol s_return = new Symbol("zwrot", "Zwrot zapłaconej kwoty");
-    static readonly Symbol s_basic = new Symbol("podstawowe", "Mycie podstawowe");
-    static readonly Symbol s_wax = new Symbol("woskowanie", "Mycie z woskowaniem");
+    static readonly Symbol s_1 = new Symbol("s_1", "1", "Moneta 1zł");
+    static readonly Symbol s_2 = new Symbol("s_2", "2", "Moneta 2zł");
+    static readonly Symbol s_5 = new Symbol("s_5", "5", "Moneta 5zł");
+    static readonly Symbol s_return = new Symbol("s_return", "zwrot", "Zwrot zapłaconej kwoty");
+    static readonly Symbol s_basic = new Symbol("s_basic", "podstawowe", "Mycie podstawowe");
+    static readonly Symbol s_wax = new Symbol("s_wax", "woskowanie", "Mycie z woskowaniem");
 
-    static readonly State q_0 = new State("Suma wrzuconych monet 0zł");
-    static readonly State q_1 = new State("Suma wrzuconych monet 1zł");
-    static readonly State q_1_return1 = new State("Suma wrzuconych monet 1zł\nZwróć 1zł");
-    static readonly State q_2 = new State("Suma wrzuconych monet 2zł");
-    static readonly State q_2_return2 = new State("Suma wrzuconych monet 2zł\nZwróć 2zł");
-    static readonly State q_3 = new State("Suma wrzuconych monet 3zł");
-    static readonly State q_3_return3 = new State("Suma wrzuconych monet 3zł\nZwróć 3zł");
-    static readonly State q_4 = new State("Suma wrzuconych monet 4zł");
-    static readonly State q_4_return4 = new State("Suma wrzuconych monet 4zł\nZwróć 4zł");
-    static readonly State q_5 = new State("Suma wrzuconych monet 5zł");
-    static readonly State q_5_return5 = new State("Suma wrzuconych monet 5zł\nZwróć 5zł");
-    static readonly State q_6 = new State("Suma wrzuconych monet 6zł");
-    static readonly State q_6_return6 = new State("Suma wrzuconych monet 6zł\nZwróć 6zł");
-    static readonly State q_7 = new State("Suma wrzuconych monet 7zł");
-    static readonly State q_7_return7 = new State("Suma wrzuconych monet 7zł\nZwróć 7zł");
-    static readonly State q_8 = new State("Suma wrzuconych monet 8zł");
-    static readonly State q_8_return8 = new State("Suma wrzuconych monet 8zł\nZwróć 8zł");
-    static readonly State q_9 = new State("Suma wrzuconych monet 9zł");
-    static readonly State q_9_return9 = new State("Suma wrzuconych monet 9zł\nZwróć 9zł");
-    static readonly State q_10 = new State("Suma wrzuconych monet 10zł");
-    static readonly State q_10_return10 = new State("Suma wrzuconych monet 10zł\nZwróć 10zł");
-    static readonly State q_1_return11 = new State("Suma wrzuconych monet 11zł");
-    static readonly State q_11_return11 = new State("Suma wrzuconych monet 11zł\nZwróć 1zł");
-    static readonly State q_1_return13 = new State("Suma wrzuconych monet 12zł");
-    static readonly State q_12_return12 = new State("Suma wrzuconych monet 12zł\nZwróć 12zł");
-    static readonly State q_1_return15 = new State("Suma wrzuconych monet 13zł");
-    static readonly State q_13_return13 = new State("Suma wrzuconych monet 13zł\nZwróć 13zł");
-    static readonly State q_14 = new State("Suma wrzuconych monet 14zł");
-    static readonly State q_14_return14 = new State("Suma wrzuconych monet 14zł\nZwróć 14zł");
-    static readonly State q_15 = new State("Suma wrzuconych monet 15zł");
-    static readonly State q_15_return15 = new State("Suma wrzuconych monet 15zł\nZwróć 15zł");
-    static readonly State q_15_basic = new State("Suma wrzuconych monet 15zł\nWydaj bilet na mycie podstawowe");
-    static readonly State q_16 = new State("Suma wrzuconych monet 16zł");
-    static readonly State q_16_return16 = new State("Suma wrzuconych monet 16zł\nZwróć 16zł");
-    static readonly State q_16_basic_change1 = new State("Suma wrzuconych monet 16zł\nWydaj bilet na mycie podstawowe\nWydaj resztę 1zł");
-    static readonly State q_17 = new State("Suma wrzuconych monet 17zł");
-    static readonly State q_17_return17 = new State("Suma wrzuconych monet 17zł\nZwróć 17zł");
-    static readonly State q_17_basic_change2 = new State("Suma wrzuconych monet 17zł\nWydaj bilet na mycie podstawowe\nWydaj resztę 2zł");
-    static readonly State q_18 = new State("Suma wrzuconych monet 18zł");
-    static readonly State q_18_return18 = new State("Suma wrzuconych monet 18zł\nZwróć 18zł");
-    static readonly State q_18_basic_change3 = new State("Suma wrzuconych monet 18zł\nWydaj bilet na mycie podstawowe\nWydaj resztę 3zł");
-    static readonly State q_19 = new State("Suma wrzuconych monet 19zł");
-    static readonly State q_19_return19 = new State("Suma wrzuconych monet 19zł\nZwróć 19zł");
-    static readonly State q_19_basic_change4 = new State("Suma wrzuconych monet 19zł\nWydaj bilet na mycie podstawowe\nWydaj resztę 4zł");
-    static readonly State q_20 = new State("Suma wrzuconych monet 20zł");
-    static readonly State q_20_return20 = new State("Suma wrzuconych monet 20zł\nZwróć 20zł");
-    static readonly State q_20_basic_change5 = new State("Suma wrzuconych monet 20zł\nWydaj bilet na mycie podstawowe\nWydaj resztę 5zł");
-    static readonly State q_20_wax = new State("Suma wrzuconych monet 20zł\nWydaj bilet na mycie z woskowaniem");
-    static readonly State q_21_return1 = new State("Suma wrzuconych monet 21zł\nZwróc 1zł");
-    static readonly State q_22_return2 = new State("Suma wrzuconych monet 22zł\nZwróc 2zł");
-    static readonly State q_23_return3 = new State("Suma wrzuconych monet 23zł\nZwróc 3zł");
-    static readonly State q_24_return4 = new State("Suma wrzuconych monet 24zł\nZwróc 4zł");
-    static readonly State q_25_return5 = new State("Suma wrzuconych monet 25zł\nZwróc 5zł");
+    static readonly State q_0 = new State("q_0", "Suma wrzuconych monet 0zł");
+    static readonly State q_1 = new State("q_1", "Suma wrzuconych monet 1zł");
+    static readonly State q_1_return1 = new State("q_1_return1", "Suma wrzuconych monet 1zł\nZwróć 1zł");
+    static readonly State q_2 = new State("q_2", "Suma wrzuconych monet 2zł");
+    static readonly State q_2_return2 = new State("q_2_return2", "Suma wrzuconych monet 2zł\nZwróć 2zł");
+    static readonly State q_3 = new State("q_3", "Suma wrzuconych monet 3zł");
+    static readonly State q_3_return3 = new State("q_3_return3", "Suma wrzuconych monet 3zł\nZwróć 3zł");
+    static readonly State q_4 = new State("q_4", "Suma wrzuconych monet 4zł");
+    static readonly State q_4_return4 = new State("q_4_return4", "Suma wrzuconych monet 4zł\nZwróć 4zł");
+    static readonly State q_5 = new State("q_5", "Suma wrzuconych monet 5zł");
+    static readonly State q_5_return5 = new State("q_5_return5", "Suma wrzuconych monet 5zł\nZwróć 5zł");
+    static readonly State q_6 = new State("q_6", "Suma wrzuconych monet 6zł");
+    static readonly State q_6_return6 = new State("q_6_return6", "Suma wrzuconych monet 6zł\nZwróć 6zł");
+    static readonly State q_7 = new State("q_7", "Suma wrzuconych monet 7zł");
+    static readonly State q_7_return7 = new State("q_7_return7", "Suma wrzuconych monet 7zł\nZwróć 7zł");
+    static readonly State q_8 = new State("q_8", "Suma wrzuconych monet 8zł");
+    static readonly State q_8_return8 = new State("q_8_return8", "Suma wrzuconych monet 8zł\nZwróć 8zł");
+    static readonly State q_9 = new State("q_9", "Suma wrzuconych monet 9zł");
+    static readonly State q_9_return9 = new State("q_9_return9", "Suma wrzuconych monet 9zł\nZwróć 9zł");
+    static readonly State q_10 = new State("q_10", "Suma wrzuconych monet 10zł");
+    static readonly State q_10_return10 = new State("q_10_return10", "Suma wrzuconych monet 10zł\nZwróć 10zł");
+    static readonly State q_11 = new State("q_11", "Suma wrzuconych monet 11zł");
+    static readonly State q_11_return11 = new State("q_11_return11", "Suma wrzuconych monet 11zł\nZwróć 11zł");
+    static readonly State q_12 = new State("q_12", "Suma wrzuconych monet 12zł");
+    static readonly State q_12_return12 = new State("q_12_return12", "Suma wrzuconych monet 12zł\nZwróć 12zł");
+    static readonly State q_13 = new State("q_13", "Suma wrzuconych monet 13zł");
+    static readonly State q_13_return13 = new State("q_13_return13", "Suma wrzuconych monet 13zł\nZwróć 13zł");
+    static readonly State q_14 = new State("q_14", "Suma wrzuconych monet 14zł");
+    static readonly State q_14_return14 = new State("q_14_return14", "Suma wrzuconych monet 14zł\nZwróć 14zł");
+    static readonly State q_15 = new State("q_15", "Suma wrzuconych monet 15zł");
+    static readonly State q_15_return15 = new State("q_15_return15", "Suma wrzuconych monet 15zł\nZwróć 15zł");
+    static readonly State q_15_basic = new State("q_15_basic", "Suma wrzuconych monet 15zł\nWydaj bilet na mycie podstawowe");
+    static readonly State q_16 = new State("q_16", "Suma wrzuconych monet 16zł");
+    static readonly State q_16_return16 = new State("q_16_return16", "Suma wrzuconych monet 16zł\nZwróć 16zł");
+    static readonly State q_16_basic_change1 = new State("q_16_basic_change1", "Suma wrzuconych monet 16zł\nWydaj bilet na mycie podstawowe\nWydaj resztę 1zł");
+    static readonly State q_17 = new State("q_17", "Suma wrzuconych monet 17zł");
+    static readonly State q_17_return17 = new State("q_17_return17", "Suma wrzuconych monet 17zł\nZwróć 17zł");
+    static readonly State q_17_basic_change2 = new State("q_17_basic_change2", "Suma wrzuconych monet 17zł\nWydaj bilet na mycie podstawowe\nWydaj resztę 2zł");
+    static readonly State q_18 = new State("q_18", "Suma wrzuconych monet 18zł");
+    static readonly State q_18_return18 = new State("q_18_return18", "Suma wrzuconych monet 18zł\nZwróć 18zł");
+    static readonly State q_18_basic_change3 = new State("q_18_basic_change3", "Suma wrzuconych monet 18zł\nWydaj bilet na mycie podstawowe\nWydaj resztę 3zł");
+    static readonly State q_19 = new State("q_19", "Suma wrzuconych monet 19zł");
+    static readonly State q_19_return19 = new State("q_19_return19", "Suma wrzuconych monet 19zł\nZwróć 19zł");
+    static readonly State q_19_basic_change4 = new State("q_19_basic_change4", "Suma wrzuconych monet 19zł\nWydaj bilet na mycie podstawowe\nWydaj resztę 4zł");
+    static readonly State q_20 = new State("q_20", "Suma wrzuconych monet 20zł");
+    static readonly State q_20_return20 = new State("q_20_return20", "Suma wrzuconych monet 20zł\nZwróć 20zł");
+    static readonly State q_20_basic_change5 = new State("q_20_basic_change5", "Suma wrzuconych monet 20zł\nWydaj bilet na mycie podstawowe\nWydaj resztę 5zł");
+    static readonly State q_20_wax = new State("q_20_wax", "Suma wrzuconych monet 20zł\nWydaj bilet na mycie z woskowaniem");
+    static readonly State q_21_return1 = new State("q_21_return1", "Suma wrzuconych monet 21zł\nZwróc 1zł");
+    static readonly State q_22_return2 = new State("q_22_return2", "Suma wrzuconych monet 22zł\nZwróc 2zł");
+    static readonly State q_23_return3 = new State("q_23_return3", "Suma wrzuconych monet 23zł\nZwróc 3zł");
+    static readonly State q_24_return4 = new State("q_24_return4", "Suma wrzuconych monet 24zł\nZwróc 4zł");
+    static readonly State q_25_return5 = new State("q_25_return5", "Suma wrzuconych monet 25zł\nZwróc 5zł");
 
     static readonly List<State> states = new List<State>
     {
@@ -141,11 +200,11 @@ class Program
         q_9_return9,
         q_10,
         q_10_return10,
-        q_1_return11,
+        q_11,
         q_11_return11,
-        q_1_return13,
+        q_12,
         q_12_return12,
-        q_1_return15,
+        q_13,
         q_13_return13,
         q_14,
         q_14_return14,
@@ -354,7 +413,7 @@ class Program
             {
                 { s_1, q_7 },
                 { s_2, q_8 },
-                { s_5, q_1_return11 },
+                { s_5, q_11 },
                 { s_return, q_6_return6 },
                 { s_basic, q_6 },
                 { s_wax, q_6 }
@@ -378,7 +437,7 @@ class Program
             {
                 { s_1, q_8 },
                 { s_2, q_9 },
-                { s_5, q_1_return13 },
+                { s_5, q_12 },
                 { s_return, q_7_return7 },
                 { s_basic, q_7 },
                 { s_wax, q_7 }
@@ -402,7 +461,7 @@ class Program
             {
                 { s_1, q_9 },
                 { s_2, q_10 },
-                { s_5, q_1_return15 },
+                { s_5, q_13 },
                 { s_return, q_8_return8 },
                 { s_basic, q_8 },
                 { s_wax, q_8 }
@@ -425,7 +484,7 @@ class Program
             new Dictionary<Symbol, State>
             {
                 { s_1, q_10 },
-                { s_2, q_1_return11 },
+                { s_2, q_11 },
                 { s_5, q_14 },
                 { s_return, q_9_return9 },
                 { s_basic, q_9 },
@@ -448,8 +507,8 @@ class Program
             q_10,
             new Dictionary<Symbol, State>
             {
-                { s_1, q_1_return11 },
-                { s_2, q_1_return13 },
+                { s_1, q_11 },
+                { s_2, q_12 },
                 { s_5, q_15 },
                 { s_return, q_10_return10 },
                 { s_basic, q_10 },
@@ -469,15 +528,15 @@ class Program
             }
         },
         {
-            q_1_return11,
+            q_11,
             new Dictionary<Symbol, State>
             {
-                { s_1, q_1_return13 },
-                { s_2, q_1_return15 },
+                { s_1, q_12 },
+                { s_2, q_13 },
                 { s_5, q_16 },
                 { s_return, q_11_return11 },
-                { s_basic, q_1_return11 },
-                { s_wax, q_1_return11 }
+                { s_basic, q_11 },
+                { s_wax, q_11 }
             }
         },
         {
@@ -493,15 +552,15 @@ class Program
             }
         },
         {
-            q_1_return13,
+            q_12,
             new Dictionary<Symbol, State>
             {
-                { s_1, q_1_return15 },
+                { s_1, q_13 },
                 { s_2, q_14 },
                 { s_5, q_17 },
                 { s_return, q_12_return12 },
-                { s_basic, q_1_return13 },
-                { s_wax, q_1_return13 }
+                { s_basic, q_12 },
+                { s_wax, q_12 }
             }
         },
         {
@@ -517,15 +576,15 @@ class Program
             }
         },
         {
-            q_1_return15,
+            q_13,
             new Dictionary<Symbol, State>
             {
                 { s_1, q_14 },
                 { s_2, q_15 },
                 { s_5, q_18 },
                 { s_return, q_13_return13 },
-                { s_basic, q_1_return15 },
-                { s_wax, q_1_return15 }
+                { s_basic, q_13 },
+                { s_wax, q_13 }
             }
         },
         {
@@ -856,33 +915,44 @@ class Program
 
     static void Main()
     {
-
         DFA dfa = new DFA(states, alphabet, initialState, acceptingStates, transitionTable);
 
         Console.WriteLine("Automat pobierający opłaty w myjni samochodowej");
         Console.WriteLine();
         dfa.printPossibleSymbols();
+        dfa.printCurrentState();
 
         while (true)
         {
-
+            Console.WriteLine("----------------------------------------");
             string? input = Console.ReadLine();
             Console.WriteLine();
 
-            if (!dfa.isSymbolInAlphabet(input))
+            try
             {
-                Console.WriteLine($"Symbol \"{input}\" nie znajduje się w alfabecie automatu.");
+                dfa.transition(input);
+            }
+            catch (InvalidSymbolException e)
+            {
+                Console.WriteLine(e.Message);
                 Console.WriteLine();
                 dfa.printPossibleSymbols();
+                dfa.printCurrentState();
                 continue;
             }
+            catch (UndefinedTransitionException e)
+            {
+                Console.WriteLine(e.Message);
+                return;
+            }
 
-            // Console.WriteLine("Yay!");
+            dfa.printCurrentState();
 
+            if (dfa.isCurrentStateAccepting()) break;
         }
 
-        // Console.WriteLine("Program zakończony!");
-        // Console.WriteLine($"Stan końcowy: {}");
-
+        Console.WriteLine("Automat zakończył działanie!");
+        Console.WriteLine();
+        dfa.printStateHistory();
     }
 }
