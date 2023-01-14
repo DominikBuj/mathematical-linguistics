@@ -937,7 +937,7 @@ class Program
         }
     };
 
-    static void Main()
+    static void Main(string[] args)
     {
         // Inicjalizacja obiektu reprezentującego automat DFA.
         DFA dfa = new DFA(states, alphabet, initialState, acceptingStates, transitionTable);
