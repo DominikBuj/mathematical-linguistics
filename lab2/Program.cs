@@ -36,9 +36,6 @@ public class NFA
         this.InitialState = InitialState;
         this.AcceptingStates = AcceptingStates;
         this.TransitionTable = TransitionTable;
-
-        this.CurrentStates = new List<State> { this.InitialState };
-        this.StatesHistory.Add(this.CurrentStates);
     }
 
     public List<State> States { get; } // Wszystkie możliwe stany
@@ -47,14 +44,27 @@ public class NFA
     public List<State> AcceptingStates { get; } // Akceptujące stany
     public Dictionary<State, Dictionary<char, List<State>>> TransitionTable { get; } // Tablica przejść
     public List<State> CurrentStates { get; set; } // Obecny stan (stany)
-    public List<List<State>> StatesHistory { get; set; } = new List<List<State>>(); // Historia stanów
+    public List<List<State>> StatesHistory { get; set; } // Historia stanów
 
-    public void printCurrentStates()
+    public string getCurrentStates()
     {
         if (this.CurrentStates.Count <= 0) return "Aktualny stan (stany): {}";
         string currentStates = this.CurrentStates[0].Name;
         for (int i = 1; i < this.CurrentStates.Count; ++i) currentStates += $", {this.CurrentStates[i].Name}";
-        Console.WriteLine($"Aktualny stan (stany): {{{currentStates}}}");
+        return $"Aktualny stan (stany): {{{currentStates}}}";
+    }
+
+    public void analyzeWord(string word)
+    {
+        this.CurrentStates = new List<State> { this.InitialState };
+        this.StatesHistory = new List<List<State>> { new List<State>(this.CurrentStates) };
+        Console.WriteLine($"Analizowane słowo: \"{word}\" {this.getCurrentStates()}");
+        foreach (char symbol in word)
+        {
+            this.transition(symbol);
+            Console.WriteLine($"Wczytany symbol: \'{symbol}\' {this.getCurrentStates()}");
+        }
+        Console.WriteLine();
     }
 
     // public void printStatesHistory()
@@ -66,32 +76,26 @@ public class NFA
     //     // Console.WriteLine();
     // }
 
-    // public bool isCurrentStateAccepting()
-    // {
-    //     // return this.AcceptingStates.Any(acceptingState => acceptingState == this.CurrentState);
-    // }
+    public bool isStateAccepting(State state)
+    {
+        return this.AcceptingStates.Any(acceptingState => state == this.CurrentState);
+    }
 
-    // public void transition(string? input)
-    // {
-    //     // // Na podstawie wprowadzonego tekstu zostaje znaleziony odpowiedni symbol alfabetu.
-    //     // Symbol? inputSymbol = this.Alphabet.Find(alphabetSymbol => alphabetSymbol.Content == input);
-    //     // // W przypadku gdy wprowadzony tekst nie odpowiada żadnemu symbolowi, funkcja wyrzuca wyjątek.
-    //     // if (inputSymbol == null) throw new InvalidSymbolException($"\"{input}\" nie znajduje się w alfabecie automatu!");
-
-    //     // // Na podstawie obecnego stanu automatu i wprowadzonego symbolu, z tabeli przejść zostaje wyczytany następny stan automatu.
-    //     // // W przypadku gdy z tabeli przejść nie uda się wyczytać następnego stanu, funkcja wyrzuca wyjątek.
-    //     // if (this.TransitionTable.TryGetValue(this.CurrentState, out Dictionary<Symbol, State>? stateTransitions))
-    //     // {
-    //     //     if (stateTransitions == null) throw new InvalidSymbolException($"Przejścia dla stanu {this.CurrentState.Name} nie są zdefiniowane!");
-    //     //     if (stateTransitions.TryGetValue(inputSymbol, out State? nextState))
-    //     //     {
-    //     //         if (nextState == null) throw new InvalidSymbolException($"Przejście ze stanu {this.CurrentState.Name} i symbolu {inputSymbol.Name} nie jest zdefiniowane!");
-    //     //         // Automat zmienia obecny stan na stan wyczytany z tabeli przejść i dodaje go do historii stanów automatu.
-    //     //         this.CurrentState = nextState;
-    //     //         this.StateHistory.Add(this.CurrentState);
-    //     //     }
-    //     // }
-    // }
+    public void transition(char symbol)
+    {
+        foreach (State state in this.CurrentStates.ToList())
+        {
+            this.CurrentStates.Remove(state);
+            if (this.TransitionTable.TryGetValue(state, out Dictionary<char, List<State>> stateTransitions))
+            {
+                if (stateTransitions.TryGetValue(symbol, out List<State> nextStates))
+                {
+                    foreach (State nextState in nextStates) this.CurrentStates.Add(nextState);
+                }
+            }
+        }
+        this.StatesHistory.Add(this.CurrentStates);
+    }
 }
 
 class Program
@@ -292,19 +296,20 @@ class Program
         Console.WriteLine("Program analizujący potrójne występowanie symboli w wyrazach");
         Console.WriteLine();
 
-        string? filePath = null;
+        string filePath = "words.txt";
+        // string? filePath = null;
 
-        while (true)
-        {
-            Console.WriteLine("Podaj nazwę pliku w folderze programu albo pełną ścieżkę do pliku ze słowami do analizy:");
-            filePath = Console.ReadLine();
-            if (File.Exists(filePath)) break;
-            filePath = $@"{Environment.CurrentDirectory}\{filePath}";
-            if (File.Exists(filePath)) break;
-            Console.WriteLine();
-            Console.WriteLine("Nie udało się znaleźć pliku!");
-            Console.WriteLine();
-        }
+        // while (true)
+        // {
+        //     Console.WriteLine("Podaj nazwę pliku w folderze programu albo pełną ścieżkę do pliku ze słowami do analizy:");
+        //     filePath = Console.ReadLine();
+        //     if (File.Exists(filePath)) break;
+        //     filePath = $@"{Environment.CurrentDirectory}\{filePath}";
+        //     if (File.Exists(filePath)) break;
+        //     Console.WriteLine();
+        //     Console.WriteLine("Nie udało się znaleźć pliku!");
+        //     Console.WriteLine();
+        // }
 
         string fileText = System.IO.File.ReadAllText(filePath);
         string[] fileWords = fileText.Split('#');
@@ -315,10 +320,8 @@ class Program
 
         NFA nfa = new NFA(states, alphabet, initialState, acceptingStates, transitionTable);
 
-        foreach (string word in fileWords)
-        {
-            Console.WriteLine($"Analizowane słowo: \"{word}\"");
-            Console.WriteLine();
-        }
+        foreach (string word in fileWords) nfa.analyzeWord(word);
+
+        Console.WriteLine("Zakończono!");
     }
 }
