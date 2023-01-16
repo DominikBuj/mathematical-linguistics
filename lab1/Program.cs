@@ -296,7 +296,7 @@ class Program
 
     // Tabela przejść automatu, zapisana przy użyciu słownika C#.
     // Każdy stan ma przypisany do siebie kolejny słownik,
-    // w którym dla każdego symbolu jest przypisany odpowiedni następny stan automatu.    
+    // w którym dla każdego symbolu jest przypisany odpowiedni następny stan automatu.
     static readonly Dictionary<State, Dictionary<Symbol, State>> transitionTable = new Dictionary<State, Dictionary<Symbol, State>>
     {
         {

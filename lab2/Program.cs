@@ -2,14 +2,6 @@
 // Zadanie: 2 Automat Niedeterministyczny
 // Wersja programu: na ocenę dobrą
 
-[Serializable]
-public class InvalidSymbolException : Exception
-{
-    public InvalidSymbolException() : base() { }
-    public InvalidSymbolException(string message) : base(message) { }
-    public InvalidSymbolException(string message, Exception inner) : base(message, inner) { }
-}
-
 public class State
 {
     public State(string Name, string Description)
@@ -22,84 +14,9 @@ public class State
     public string Description { get; }
 }
 
-public class NFA
-{
-    public NFA(
-        List<State> States,
-        List<char> Alphabet,
-        State InitialState,
-        List<State> AcceptingStates,
-        Dictionary<State, Dictionary<char, List<State>>> TransitionTable)
-    {
-        this.States = States;
-        this.Alphabet = Alphabet;
-        this.InitialState = InitialState;
-        this.AcceptingStates = AcceptingStates;
-        this.TransitionTable = TransitionTable;
-    }
-
-    public List<State> States { get; } // Wszystkie możliwe stany
-    public List<char> Alphabet { get; } // Alfabet
-    public State InitialState { get; } // Początkowy stan
-    public List<State> AcceptingStates { get; } // Akceptujące stany
-    public Dictionary<State, Dictionary<char, List<State>>> TransitionTable { get; } // Tablica przejść
-    public List<State> CurrentStates { get; set; } // Obecny stan (stany)
-    public List<List<State>> StatesHistory { get; set; } // Historia stanów
-
-    public string getCurrentStates()
-    {
-        if (this.CurrentStates.Count <= 0) return "Aktualny stan (stany): {}";
-        string currentStates = this.CurrentStates[0].Name;
-        for (int i = 1; i < this.CurrentStates.Count; ++i) currentStates += $", {this.CurrentStates[i].Name}";
-        return $"Aktualny stan (stany): {{{currentStates}}}";
-    }
-
-    public void analyzeWord(string word)
-    {
-        this.CurrentStates = new List<State> { this.InitialState };
-        this.StatesHistory = new List<List<State>> { new List<State>(this.CurrentStates) };
-        Console.WriteLine($"Analizowane słowo: \"{word}\" {this.getCurrentStates()}");
-        foreach (char symbol in word)
-        {
-            this.transition(symbol);
-            Console.WriteLine($"Wczytany symbol: \'{symbol}\' {this.getCurrentStates()}");
-        }
-        Console.WriteLine();
-    }
-
-    // public void printStatesHistory()
-    // {
-    //     // Console.WriteLine("Historia przejść stanów:");
-    //     // if (this.StateHistory.Count > 0) Console.Write(this.StateHistory[0].Name);
-    //     // else Console.WriteLine("Brak stanów!");
-    //     // for (int i = 1; i < this.StateHistory.Count; ++i) Console.Write($" -> {this.StateHistory[i].Name}");
-    //     // Console.WriteLine();
-    // }
-
-    public bool isStateAccepting(State state)
-    {
-        return this.AcceptingStates.Any(acceptingState => state == this.CurrentState);
-    }
-
-    public void transition(char symbol)
-    {
-        foreach (State state in this.CurrentStates.ToList())
-        {
-            this.CurrentStates.Remove(state);
-            if (this.TransitionTable.TryGetValue(state, out Dictionary<char, List<State>> stateTransitions))
-            {
-                if (stateTransitions.TryGetValue(symbol, out List<State> nextStates))
-                {
-                    foreach (State nextState in nextStates) this.CurrentStates.Add(nextState);
-                }
-            }
-        }
-        this.StatesHistory.Add(this.CurrentStates);
-    }
-}
-
 class Program
 {
+    // Możliwe stany automatu.
     static readonly State q0 = new State("q0", "Słowo jest puste");
     static readonly State q1 = new State("q1", "W słowie znajduje się podsłowo \"0\"");
     static readonly State q2 = new State("q2", "W słowie znajduje się podsłowo \"1\"");
@@ -118,6 +35,7 @@ class Program
     static readonly State q15 = new State("q15", "W słowie wystąpiło potrojenie składające się z cyfr");
     static readonly State q16 = new State("q16", "W słowie wystąpiło potrojenie składające się z liter");
 
+    // Lista możliwych stanów automatu.
     static readonly List<State> states = new List<State>
     {
         q0,
@@ -139,16 +57,21 @@ class Program
         q16
     };
 
+    // Alfabet automatu.
     static readonly List<char> alphabet = new List<char> { '0', '1', '2', '3', 'a', 'b', 'c' };
 
+    // Początkowy stan automatu.
     static readonly State initialState = q0;
 
+    // Stany akceptujące automatu.
     static readonly List<State> acceptingStates = new List<State>
     {
         q15,
         q16
     };
 
+    // Tabela przejść automatu.
+    // Każdy stan dla obsługiwanych symboli ma przypisaną listę kolejnych stanów automatu.
     static readonly Dictionary<State, Dictionary<char, List<State>>> transitionTable = new Dictionary<State, Dictionary<char, List<State>>>
     {
         {
@@ -290,31 +213,108 @@ class Program
         },
     };
 
+    // Klasa reprezentująca automat niedeterministyczny.
+    public class NFA
+    {
+        public NFA(
+            List<State> States,
+            List<char> Alphabet,
+            State InitialState,
+            List<State> AcceptingStates,
+            Dictionary<State, Dictionary<char, List<State>>> TransitionTable)
+        {
+            this.States = States;
+            this.Alphabet = Alphabet;
+            this.InitialState = InitialState;
+            this.AcceptingStates = AcceptingStates;
+            this.TransitionTable = TransitionTable;
+        }
+
+        public List<State> States { get; } // Wszystkie możliwe stany
+        public List<char> Alphabet { get; } // Alfabet
+        public State InitialState { get; } // Początkowy stan
+        public List<State> AcceptingStates { get; } // Akceptujące stany
+        public Dictionary<State, Dictionary<char, List<State>>> TransitionTable { get; } // Tablica przejść
+        public List<State> CurrentStates { get; set; } = new List<State>(); // Obecny stan (stany)
+        public List<List<State>> StatesHistory { get; set; } = new List<List<State>>(); // Historia stanów
+
+        public string getCurrentStates()
+        {
+            string currentStates = "{";
+            for (int i = 0; i < this.CurrentStates.Count; ++i) currentStates += (i != 0 ? ", " : "") + this.CurrentStates[i].Name;
+            currentStates += "}";
+            return $"Aktualny stan (stany) = {currentStates}";
+        }
+
+        // Ilość wystąpień potrojeń cyfr/liczb jest obliczona na podstawie ilości wystąpień poszczególnych stanów akceptujących
+        public void printAnalysisResults()
+        {
+            int tripleDigitsCounter = this.CurrentStates.Count(state => state == q15);
+            int tirpleLetterCounter = this.CurrentStates.Count(state => state == q16);
+            Console.WriteLine($"Ilość wystąpienia potrojenia cyfr = {tripleDigitsCounter}");
+            Console.WriteLine($"Ilość wystąpienia potrojenia liter = {tirpleLetterCounter}");
+        }
+
+        public void printStatesHistory()
+        {
+            string statesHistory = "{";
+            for (int i = 0; i < this.StatesHistory.Count; ++i)
+            {
+                List<State> stateHistory = this.StatesHistory[i];
+                string states = "{";
+                for (int j = 0; j < stateHistory.Count; ++j) states += (j != 0 ? ", " : "") + stateHistory[j].Name;
+                states += "}";
+                statesHistory += (i != 0 ? ", " : "") + states;
+            }
+            statesHistory += "}";
+            Console.WriteLine($"Historia stanów = {statesHistory}");
+            Console.WriteLine();
+        }
+
+        public void analyzeWord(string word)
+        {
+            this.CurrentStates = new List<State> { this.InitialState };
+            this.StatesHistory = new List<List<State>> { new List<State>(this.CurrentStates) };
+            Console.WriteLine($"Analizowane słowo = \"{word}\" {this.getCurrentStates()}");
+            foreach (char symbol in word)
+            {
+                this.transition(symbol);
+                Console.WriteLine($"Wczytany symbol = \'{symbol}\' {this.getCurrentStates()}");
+            }
+            this.printAnalysisResults();
+            this.printStatesHistory();
+        }
+
+        // Funkcja przejścia automatu. Akceptuje pojedyńczy symbol (obecny stan/stany są zapisane w klasie).
+        public void transition(char symbol)
+        {
+            foreach (State state in this.CurrentStates.ToList())
+            {
+                // Stan dla którego nie ma przypisanego następnego stanu/stanów jest usuwany.
+                this.CurrentStates.Remove(state);
+                if (this.TransitionTable.TryGetValue(state, out Dictionary<char, List<State>>? stateTransitions))
+                {
+                    if (stateTransitions.TryGetValue(symbol, out List<State>? nextStates))
+                    {
+                        // Z tabli przejść jest wyczytany następny stan/stany.
+                        foreach (State nextState in nextStates) this.CurrentStates.Add(nextState);
+                    }
+                }
+            }
+            // Stan/stany są dodawne do historii stanów.
+            this.StatesHistory.Add(new List<State>(this.CurrentStates));
+        }
+    }
+
     static void Main(string[] args)
     {
         Console.WriteLine();
         Console.WriteLine("Program analizujący potrójne występowanie symboli w wyrazach");
         Console.WriteLine();
 
-        string filePath = "words.txt";
-        // string? filePath = null;
-
-        // while (true)
-        // {
-        //     Console.WriteLine("Podaj nazwę pliku w folderze programu albo pełną ścieżkę do pliku ze słowami do analizy:");
-        //     filePath = Console.ReadLine();
-        //     if (File.Exists(filePath)) break;
-        //     filePath = $@"{Environment.CurrentDirectory}\{filePath}";
-        //     if (File.Exists(filePath)) break;
-        //     Console.WriteLine();
-        //     Console.WriteLine("Nie udało się znaleźć pliku!");
-        //     Console.WriteLine();
-        // }
-
-        string fileText = System.IO.File.ReadAllText(filePath);
+        string fileText = System.IO.File.ReadAllText($@"{Environment.CurrentDirectory}\words.txt");
         string[] fileWords = fileText.Split('#');
 
-        Console.WriteLine();
         Console.WriteLine("Wczytano plik!");
         Console.WriteLine();
 
@@ -322,6 +322,7 @@ class Program
 
         foreach (string word in fileWords) nfa.analyzeWord(word);
 
-        Console.WriteLine("Zakończono!");
+        Console.WriteLine("Automat zakończył działanie!");
+        Console.WriteLine();
     }
 }
