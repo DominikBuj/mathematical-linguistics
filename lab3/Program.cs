@@ -19,32 +19,32 @@ public class TM
     public TM(
         List<State> states,
         List<char> alphabet,
+        char blankSymbol,
+        List<char> inputSymbols,
         State initialState,
         List<State> acceptingStates,
-        Dictionary<State, Dictionary<char, Object[]>> transitionTable,
-        char blankSymbol)
+        Dictionary<State, Dictionary<char, Object[]>> transitionTable)
     {
         this.States = states;
         this.Alphabet = alphabet;
+        this.BlankSymbol = blankSymbol;
+        this.InputSymbols = inputSymbols;
         this.InitialState = initialState;
         this.AcceptingStates = acceptingStates;
         this.TransitionTable = transitionTable;
-        this.BlankSymbol = blankSymbol;
-
-        this.CurrentState = this.InitialState;
-        this.StateHistory.Add(this.CurrentState);
     }
 
-    public List<State> States { get; }
-    public List<char> Alphabet { get; }
-    public State InitialState { get; }
-    public List<State> AcceptingStates { get; }
-    public Dictionary<State, Dictionary<char, object[]>> TransitionTable { get; }
-    public char BlankSymbol { get; }
-    public State CurrentState { get; set; } // Obecny stan
-    public List<State> StateHistory { get; } = new List<State>(); // Historia stanów
-    public char[]? Tape { get; set; }
-    public int TapePosition { get; set; }
+    public List<State> States { get; } // Wszystkie możliwe stany
+    public List<char> Alphabet { get; } // Alfabet
+    public char BlankSymbol { get; } // Pusty symbol
+    public List<char> InputSymbols { get; } // Zbiór symboli wejściowych
+    public State InitialState { get; } // Początkowy stan
+    public List<State> AcceptingStates { get; } // Akceptujące stany
+    public Dictionary<State, Dictionary<char, object[]>> TransitionTable { get; } // Tablica przejść
+    public State? CurrentState { get; set; } // Obecny stan
+    public List<State>? StateHistory { get; set; } // Historia stanów
+    public char[]? Tape { get; set; } // Taśma
+    public int TapePosition { get; set; } // Pozycja na taśmie
 
     public void printTape()
     {
@@ -56,6 +56,7 @@ public class TM
 
     public void printStateHistory()
     {
+        if (this.StateHistory == null) return;
         Console.WriteLine("Historia przejść stanów:");
         if (this.StateHistory.Count > 0) Console.Write(this.StateHistory[0].Name);
         else Console.WriteLine("Brak stanów!");
@@ -64,13 +65,16 @@ public class TM
         Console.WriteLine();
     }
 
+    // Funkcja przejścia automatu. Akceptuje pojedyńczy symbol (obecny stan jest zapisany w klasie).
     public void transition(char symbol)
     {
-        if (this.Tape == null) return;
+        if (this.CurrentState == null || this.Tape == null || this.StateHistory == null) return;
         if (this.TransitionTable.TryGetValue(this.CurrentState, out Dictionary<char, object[]>? stateTransitions))
         {
             if (stateTransitions.TryGetValue(symbol, out object[]? operations))
             {
+                // Z tabli przejść jest wyczytany wpisywany symbol, następny stan i kierunek ruchu taśmy.
+                // W przypadku wyczytania '-' maszyna nie wpisuje symbolu / nie zmienia stanu / nie zmienia pozycji na taśmie.
                 if ((char)operations[0] != '-') this.Tape[this.TapePosition] = (char)operations[0];
                 if (operations[1].GetType() != typeof(char) || (char)operations[1] != '-') this.CurrentState = (State)operations[1];
                 if ((char)operations[2] != '-')
@@ -89,6 +93,7 @@ public class TM
                         }
                     }
                 }
+                // Stan jest dodany do historii stanów.
                 this.StateHistory.Add(this.CurrentState);
             }
         }
@@ -96,10 +101,13 @@ public class TM
 
     public void analyzeBinaryNumber(char[] tape)
     {
-        Console.WriteLine($"Początkowy stan = {this.CurrentState.Name}");
-
+        this.CurrentState = this.InitialState;
+        this.StateHistory = new List<State> { this.CurrentState };
         this.Tape = tape;
         this.TapePosition = this.Tape.Length - 1;
+
+        if (this.CurrentState == null) return;
+        Console.WriteLine($"Początkowy stan = {this.CurrentState.Name}");
 
         while (true)
         {
@@ -110,15 +118,12 @@ public class TM
             if (symbol == this.BlankSymbol) break;
         }
         Console.WriteLine();
-
-        this.printTape();
-        this.printStateHistory();
     }
 }
 
 class Program
 {
-    // Możliwe stany automatu.
+    // Możliwe stany automatu
     static readonly State q0 = new State("q0", "Pozycja pierwszej cyfry");
     static readonly State q1 = new State("q1", "Pozycja drugiej cyfry bez przeniesienia");
     static readonly State q2 = new State("q2", "Pozycja drugiej cyfry z przeniesieniem");
@@ -126,7 +131,7 @@ class Program
     static readonly State q4 = new State("q4", "Pozycja trzeciej lub dalszej cyfry z przeniesieniem");
     static readonly State q5 = new State("q5", "Niepoprawna liczba binarna");
 
-    // Lista możliwych stanów automatu.
+    // Lista możliwych stanów automatu
     static readonly List<State> states = new List<State>
     {
         q0,
@@ -137,20 +142,26 @@ class Program
         q5
     };
 
-    // Alfabet automatu.
+    // Alfabet taśmy automatu
     static readonly List<char> alphabet = new List<char> { '0', '1', '#' };
 
-    // Początkowy stan automatu.
+    // Pusty symbol.
+    static readonly char blankSymbol = '#';
+
+    // Zbiór symboli wejściowych
+    static readonly List<char> inputSymbols = new List<char> { '0', '1' };
+
+    // Początkowy stan automatu
     static readonly State initialState = q0;
 
-    // Stany akceptujące automatu.
+    // Stany akceptujące automatu
     static readonly List<State> acceptingStates = new List<State>
     {
         q3,
         q4
     };
 
-    // Tabela przejść automatu.
+    // Tabela przejść automatu
     static readonly Dictionary<State, Dictionary<char, Object[]>> transitionTable = new Dictionary<State, Dictionary<char, Object[]>>
     {
         {
@@ -215,30 +226,35 @@ class Program
         Console.WriteLine("Program zwiększający wielocyfrową liczbę binarną o 3");
         Console.WriteLine();
 
-        TM tm = new TM(states, alphabet, initialState, acceptingStates, transitionTable, '#');
+        TM tm = new TM(states, alphabet, blankSymbol, inputSymbols, initialState, acceptingStates, transitionTable);
 
-        char[] tape;
         while (true)
         {
-            Console.Write("Wpisz liczbę binarną: ");
-            string? input = Console.ReadLine();
-
-            if (input != null && input.All(symbol => "01#".Contains(symbol)))
+            char[] tape;
+            while (true)
             {
-                tape = new char[input.Length + 1];
-                tape[0] = '#';
-                for (int i = 1, j = 0; i < tape.Length && j < input.Length; ++i, ++j) tape[i] = input[j];
-                break;
-            }
+                Console.Write("Wpisz liczbę binarną: ");
+                string? input = Console.ReadLine();
 
-            Console.WriteLine("Niepoprawna liczba binarna!");
+                if (input != null && input.All(symbol => inputSymbols.Contains(symbol)))
+                {
+                    tape = new char[input.Length + 1];
+                    tape[0] = blankSymbol;
+                    for (int i = 1, j = 0; i < tape.Length && j < input.Length; ++i, ++j) tape[i] = input[j];
+                    break;
+                }
+
+                Console.WriteLine("Niepoprawna liczba binarna!");
+                Console.WriteLine();
+            }
+            Console.WriteLine();
+
+            tm.analyzeBinaryNumber(tape);
+            tm.printTape();
+            tm.printStateHistory();
+
+            Console.WriteLine("Maszyna zakończyła działanie!");
             Console.WriteLine();
         }
-        Console.WriteLine();
-
-        tm.analyzeBinaryNumber(tape);
-
-        Console.WriteLine("Maszyna zakończyła działanie!");
-        Console.WriteLine();
     }
 }
