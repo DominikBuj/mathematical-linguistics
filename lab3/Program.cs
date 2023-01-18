@@ -2,6 +2,10 @@
 // Zadanie: 3 Maszyna Turinga
 // Wersja programu: na ocenę dobrą
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 public class State
 {
     public State(string name, string description)

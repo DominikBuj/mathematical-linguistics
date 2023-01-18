@@ -2,6 +2,10 @@
 // Zadanie: 2 Automat Niedeterministyczny
 // Wersja programu: na ocenę dobrą
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 public class State
 {
     public State(string Name, string Description)
@@ -312,7 +316,7 @@ class Program
         Console.WriteLine("Program analizujący potrójne występowanie symboli w wyrazach");
         Console.WriteLine();
 
-        string fileText = System.IO.File.ReadAllText($@"{Environment.CurrentDirectory}\words.txt");
+        string fileText = System.IO.File.ReadAllText($@"{Environment.CurrentDirectory}/words.txt");
         string[] fileWords = fileText.Split('#');
 
         Console.WriteLine("Wczytano plik!");

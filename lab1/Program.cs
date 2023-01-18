@@ -3,6 +3,10 @@
 // Wersja programu: na ocenę bardzo dobrą
 
 // Wyjątek obsługujący niepoprawny (nie znajdujący się w alfabecie DFA) symbol wprowadzony przez użytkownika.
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 [Serializable]
 public class InvalidSymbolException : Exception
 {
