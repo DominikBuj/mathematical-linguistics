@@ -50,12 +50,21 @@ public class TM
     public char[]? Tape { get; set; } // Taśma
     public int TapePosition { get; set; } // Pozycja na taśmie
 
+    public void printNumber()
+    {
+        if (this.Tape == null) return;
+        for (int i = (this.Tape[0] == '#' ? 1 : 0); i < this.Tape.Length; ++i) Console.Write(this.Tape[i]);
+        Console.WriteLine();
+    }
+
     public void printTape()
     {
         if (this.Tape == null) return;
-        Console.Write("Liczba binarna po zwiększeniu = ");
-        for (int i = (this.Tape[0] == '#' ? 1 : 0); i < this.Tape.Length; ++i) Console.Write(this.Tape[i]);
-        Console.WriteLine();
+        string symbolArrow = "        ";
+        for (int difference = 0; difference < this.TapePosition; ++difference) symbolArrow += " ";
+        symbolArrow += "V";
+        Console.WriteLine(symbolArrow);
+        Console.WriteLine($"Taśma = {new string(this.Tape)}");
     }
 
     public void printStateHistory()
@@ -79,24 +88,38 @@ public class TM
             {
                 // Z tabli przejść jest wyczytany wpisywany symbol, następny stan i kierunek ruchu taśmy.
                 // W przypadku wyczytania '-' maszyna nie wpisuje symbolu / nie zmienia stanu / nie zmienia pozycji na taśmie.
-                if ((char)operations[0] != '-') this.Tape[this.TapePosition] = (char)operations[0];
-                if (operations[1].GetType() != typeof(char) || (char)operations[1] != '-') this.CurrentState = (State)operations[1];
+                if ((char)operations[0] != '-')
+                {
+                    this.Tape[this.TapePosition] = (char)operations[0];
+                    Console.WriteLine($"Symbol zapisany na taśmie = {(char)operations[0]}");
+                }
+                else Console.WriteLine("Symbol zapisany na taśmie = Bez zmian");
+                if (operations[1].GetType() != typeof(char) || (char)operations[1] != '-')
+                {
+                    this.CurrentState = (State)operations[1];
+                    Console.WriteLine($"Następny stan = {((State)operations[1]).Name}");
+                }
+                else Console.WriteLine("Następny stan = Bez zmian");
                 if ((char)operations[2] != '-')
                 {
                     switch ((char)operations[2])
                     {
                         case 'L':
-                        {
-                            --this.TapePosition;
-                            break;
-                        }
+                            {
+                                Console.WriteLine("Kierunek ruchu głowicy = Lewo");
+                                --this.TapePosition;
+                                break;
+                            }
                         case 'R':
-                        {
-                            ++this.TapePosition;
-                            break;
-                        }
+                            {
+                                Console.WriteLine("Kierunek ruchu głowicy = Prawo");
+                                ++this.TapePosition;
+                                break;
+                            }
                     }
                 }
+                else Console.WriteLine("Kierunek ruchu głowicy = Bez ruchu");
+                Console.WriteLine();
                 // Stan jest dodany do historii stanów.
                 this.StateHistory.Add(this.CurrentState);
             }
@@ -111,17 +134,16 @@ public class TM
         this.TapePosition = this.Tape.Length - 1;
 
         if (this.CurrentState == null) return;
-        Console.WriteLine($"Początkowy stan = {this.CurrentState.Name}");
 
         while (true)
         {
-            char symbol = this.Tape[this.TapePosition];
-            Console.Write($"Wczytany symbol = \'{symbol}\' ");
-            this.transition(symbol);
             Console.WriteLine($"Aktualny stan = {this.CurrentState.Name}");
+            this.printTape();
+            char symbol = this.Tape[this.TapePosition];
+            Console.WriteLine($"Wczytany symbol = \'{symbol}\'");
+            this.transition(symbol);
             if (symbol == this.BlankSymbol) break;
         }
-        Console.WriteLine();
     }
 }
 
@@ -254,7 +276,9 @@ class Program
             Console.WriteLine();
 
             tm.analyzeBinaryNumber(tape);
-            tm.printTape();
+            Console.Write("Wynik dodawania = ");
+            tm.printNumber();
+            Console.WriteLine();
             tm.printStateHistory();
 
             Console.WriteLine("Maszyna zakończyła działanie!");
