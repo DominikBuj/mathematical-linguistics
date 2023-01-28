@@ -174,13 +174,6 @@ class Program
             Console.WriteLine("Wyrażenia muszą być zakończone ;");
             Console.WriteLine("Wpisz wyrażenie/wyrażenia arytmetyczne:");
             string? input = Console.ReadLine();
-            Console.WriteLine();
-            if (input == null)
-            {
-                Console.WriteLine("Puste wyrażenie!");
-                Console.WriteLine();
-                continue;
-            }
             GrammarParser grammarParser = new GrammarParser(input);
             try
             {
