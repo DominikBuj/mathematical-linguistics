@@ -93,13 +93,13 @@ public class TM
                     this.Tape[this.TapePosition] = (char)operations[0];
                     Console.WriteLine($"Symbol zapisany na taśmie = {(char)operations[0]}");
                 }
-                else Console.WriteLine("Symbol zapisany na taśmie = Bez zmian");
+                else Console.WriteLine($"Symbol zapisany na taśmie = Bez zmian ({this.Tape[this.TapePosition]})");
                 if (operations[1].GetType() != typeof(char) || (char)operations[1] != '-')
                 {
                     this.CurrentState = (State)operations[1];
                     Console.WriteLine($"Następny stan = {((State)operations[1]).Name}");
                 }
-                else Console.WriteLine("Następny stan = Bez zmian");
+                else Console.WriteLine($"Następny stan = Bez zmian ({this.CurrentState.Name})");
                 if ((char)operations[2] != '-')
                 {
                     switch ((char)operations[2])
@@ -137,10 +137,17 @@ public class TM
 
         while (true)
         {
+            if (this.TapePosition < 0 || this.TapePosition >= this.Tape.Length)
+            {
+                Console.WriteLine("Próba wczytania symbolu poza taśmą!");
+                Console.WriteLine("Brakuje symbolu pustego \"#\".");
+                break;
+            }
             Console.WriteLine($"Aktualny stan = {this.CurrentState.Name}");
             this.printTape();
             char symbol = this.Tape[this.TapePosition];
             Console.WriteLine($"Wczytany symbol = \'{symbol}\'");
+            Console.WriteLine();
             this.transition(symbol);
             if (symbol == this.BlankSymbol) break;
         }
@@ -155,7 +162,8 @@ class Program
     static readonly State q2 = new State("q2", "Pozycja drugiej cyfry z przeniesieniem");
     static readonly State q3 = new State("q3", "Pozycja trzeciej lub dalszej cyfry bez przeniesienia");
     static readonly State q4 = new State("q4", "Pozycja trzeciej lub dalszej cyfry z przeniesieniem");
-    static readonly State q5 = new State("q5", "Niepoprawna liczba binarna");
+    static readonly State q5 = new State("q5", "Operacja dodawania zakończona poprawnie");
+    static readonly State q6 = new State("q6", "Niepoprawna liczba binarna");
 
     // Lista możliwych stanów automatu
     static readonly List<State> states = new List<State>
@@ -165,7 +173,8 @@ class Program
         q2,
         q3,
         q4,
-        q5
+        q5,
+        q6
     };
 
     // Alfabet taśmy automatu
@@ -183,8 +192,7 @@ class Program
     // Stany akceptujące automatu
     static readonly List<State> acceptingStates = new List<State>
     {
-        q3,
-        q4
+        q5
     };
 
     // Tabela przejść automatu
@@ -196,7 +204,7 @@ class Program
             {
                 { '0', new Object[3] { '1', q1, 'L' } },
                 { '1', new Object[3] { '0', q2, 'L' } },
-                { '#', new Object[3] { '-', q5, '-' } }
+                { '#', new Object[3] { '-', q6, '-' } }
             }
         },
         {
@@ -205,7 +213,7 @@ class Program
             {
                 { '0', new Object[3] { '1', q3, 'L' } },
                 { '1', new Object[3] { '0', q4, 'L' } },
-                { '#', new Object[3] { '-', q5, '-' } }
+                { '#', new Object[3] { '-', q6, '-' } }
             }
         },
         {
@@ -214,16 +222,16 @@ class Program
             {
                 { '0', new Object[3] { '-', q4, 'L' } },
                 { '1', new Object[3] { '-', q4, 'L' } },
-                { '#', new Object[3] { '-', q5, '-' } }
+                { '#', new Object[3] { '-', q6, '-' } }
             }
         },
         {
             q3,
             new Dictionary<char, Object[]>
             {
-                { '0', new Object[3] { '-', q3, 'L' } },
-                { '1', new Object[3] { '-', q3, 'L' } },
-                { '#', new Object[3] { '-', q3, '-' } }
+                { '0', new Object[3] { '-', '-', 'L' } },
+                { '1', new Object[3] { '-', '-', 'L' } },
+                { '#', new Object[3] { '-', q5, '-' } }
             }
         },
         {
@@ -231,12 +239,21 @@ class Program
             new Dictionary<char, Object[]>
             {
                 { '0', new Object[3] { '1', q3, 'L' } },
-                { '1', new Object[3] { '0', q4, 'L' } },
-                { '#', new Object[3] { '1', q4, '-' } }
+                { '1', new Object[3] { '0', '-', 'L' } },
+                { '#', new Object[3] { '1', q5, '-' } }
             }
         },
         {
             q5,
+            new Dictionary<char, Object[]>
+            {
+                { '0', new Object[3] { '-', '-', '-' } },
+                { '1', new Object[3] { '-', '-', '-' } },
+                { '#', new Object[3] { '-', '-', '-' } }
+            }
+        },
+        {
+            q6,
             new Dictionary<char, Object[]>
             {
                 { '0', new Object[3] { '-', '-', 'L' } },
@@ -261,16 +278,15 @@ class Program
             {
                 Console.Write("Wpisz liczbę binarną: ");
                 string? input = Console.ReadLine();
-
-                if (input != null && input.All(symbol => inputSymbols.Contains(symbol)))
+                if (input != null && input.All(symbol => alphabet.Contains(symbol)))
                 {
-                    tape = new char[input.Length + 1];
-                    tape[0] = blankSymbol;
-                    for (int i = 1, j = 0; i < tape.Length && j < input.Length; ++i, ++j) tape[i] = input[j];
+                    tape = new char[input.Length];
+                    for (int i = 0, j = 0; i < tape.Length && j < input.Length; ++i, ++j) tape[i] = input[j];
                     break;
                 }
 
-                Console.WriteLine("Niepoprawna liczba binarna!");
+                Console.WriteLine("Wpisano niepoprawną liczbę!");
+                Console.WriteLine("Nic nie wpisano, albo liczba zawiera symbole nienależące do alfabetu.");
                 Console.WriteLine();
             }
             Console.WriteLine();
@@ -279,6 +295,7 @@ class Program
             Console.Write("Wynik dodawania = ");
             tm.printNumber();
             Console.WriteLine();
+            Console.WriteLine($"Końcowy stan = {tm.CurrentState.Name}");
             tm.printStateHistory();
 
             Console.WriteLine("Maszyna zakończyła działanie!");
